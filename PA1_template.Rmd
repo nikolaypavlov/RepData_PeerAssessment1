@@ -2,19 +2,69 @@
 
 
 ## Loading and preprocessing the data
-
-
+```{r}
+setwd("~/repos/RepData_PeerAssessment1/")
+file <- unzip("activity.zip")
+data <- read.csv(file)
+data$date <- as.Date(data$date, "%Y-%m-%d")
+```
 
 ## What is mean total number of steps taken per day?
+```{r}
+data.total <- tapply(data$steps, data$date, sum)
+hist(data.total, main="Total number of steps taken each day", xlab="")
+```
 
-
+```{r resluts="asis"}
+mean(data.total, na.rm=T)
+median(data.total, na.rm=T)
+```
 
 ## What is the average daily activity pattern?
+```{r}
+library(reshape2)
+data.long <- melt(data, id.vars = c("interval", "date"))
+data.activity <- dcast(data.long, interval ~ variable, mean, na.rm=T)
+plot(data.activity$interval, data.activity$steps, type="l", xlab="5-min interval", ylab="Average number of steps", main="Averaged number of steps per interval across all days")
+```
 
-
+Interval with the maximum number of steps
+```{r, results="asis"}
+data.activity$interval[which.max(data.activity$steps)]
+```
 
 ## Imputing missing values
+Number of NA samples in the dataset
+```{r, results="asis"}
+sum(!complete.cases(data))
+```
 
+Let's impute NA values with 0
+```{r}
+dataset <- data
+dataset$steps[is.na(dataset$steps)] <- 0
+dataset.total <- tapply(dataset$steps, dataset$date, sum)
+```
 
+Number of steps taken each day after NA values were imputed
+```{r}
+hist(dataset.total, main="Total number of steps taken each day", xlab="")
+```
+
+```{r resluts="asis"}
+mean(dataset.total)
+median(dataset.total)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+library(reshape2)
+library(ggplot2)
+data$days <- weekdays(data$date)
+data$days <- gsub("Sunday|Saturday", "Weekend", data$days)
+data$days <- gsub("Monday|Tuesday|Wednesday|Thursday|Friday", "Weekday", data$days)
+data$days <- as.factor(data$days)
+data.long <- melt(data[,c("interval","steps","days")], id.vars = c("interval", "days"))
+data.activity <- dcast(data.long, interval + days~ variable, mean, na.rm=T)
+qplot(interval, steps, data=data.activity, facets=days~., geom="line", main="Averaged number of steps per interval across all weekdays")
+```
